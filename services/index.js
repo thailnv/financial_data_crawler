@@ -13,6 +13,33 @@ function mapping(template, data, year, name, mArr) {
   );
   return selectedData[selectedKey];
 }
+
+async function findDataFromOtherSite(code, name, from, year) {
+  let source = {
+    kqkd: "IncSta",
+    lctt: "CashFlow",
+    cdkt: "BSheet",
+  };
+
+  const htmlResponse = await fetch(
+    `https://s.cafef.vn/bao-cao-tai-chinh/${code}/${source[from]}/${
+      year + 3
+    }/0/0/0/bao-cao.chn`
+  );
+
+  let htmlString = await htmlResponse.text();
+  let htmlArr = htmlToArray(htmlString);
+
+  return findDataFromHtml(htmlArr, name);
+}
+
+function htmlToArray(htmlString) {
+  const root = parse(htmlString);
+  const htmlTags = Array.from(root.querySelectorAll(".b_r_c"));
+  let arr = htmlTags.map((v) => v.innerHTML.toString().toLowerCase());
+  return arr;
+}
+
 function findDataFromHtml(arr, name) {
   let index = arr.findIndex((v) => v.includes(name));
   if (index === -1) return 0;
@@ -20,12 +47,7 @@ function findDataFromHtml(arr, name) {
   value = parseFloat(value);
   return value;
 }
-function htmlToArray(htmlString) {
-  const root = parse(htmlString);
-  const htmlTags = Array.from(root.querySelectorAll(".b_r_c"));
-  let arr = htmlTags.map((v) => v.innerHTML.toString().toLowerCase());
-  return arr;
-}
+
 async function getData4M(macongty) {
   try {
     console.log(macongty);
@@ -195,6 +217,169 @@ async function getData4M(macongty) {
   }
 }
 
+async function getData4Mv2(macongty) {
+  try {
+    const token =
+      "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IkdYdExONzViZlZQakdvNERWdjV4QkRITHpnSSIsImtpZCI6IkdYdExONzViZlZQakdvNERWdjV4QkRITHpnSSJ9.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmZpcmVhbnQudm4iLCJhdWQiOiJodHRwczovL2FjY291bnRzLmZpcmVhbnQudm4vcmVzb3VyY2VzIiwiZXhwIjoxODg5NjIyNTMwLCJuYmYiOjE1ODk2MjI1MzAsImNsaWVudF9pZCI6ImZpcmVhbnQudHJhZGVzdGF0aW9uIiwic2NvcGUiOlsiYWNhZGVteS1yZWFkIiwiYWNhZGVteS13cml0ZSIsImFjY291bnRzLXJlYWQiLCJhY2NvdW50cy13cml0ZSIsImJsb2ctcmVhZCIsImNvbXBhbmllcy1yZWFkIiwiZmluYW5jZS1yZWFkIiwiaW5kaXZpZHVhbHMtcmVhZCIsImludmVzdG9wZWRpYS1yZWFkIiwib3JkZXJzLXJlYWQiLCJvcmRlcnMtd3JpdGUiLCJwb3N0cy1yZWFkIiwicG9zdHMtd3JpdGUiLCJzZWFyY2giLCJzeW1ib2xzLXJlYWQiLCJ1c2VyLWRhdGEtcmVhZCIsInVzZXItZGF0YS13cml0ZSIsInVzZXJzLXJlYWQiXSwianRpIjoiMjYxYTZhYWQ2MTQ5Njk1ZmJiYzcwODM5MjM0Njc1NWQifQ.dA5-HVzWv-BRfEiAd24uNBiBxASO-PAyWeWESovZm_hj4aXMAZA1-bWNZeXt88dqogo18AwpDQ-h6gefLPdZSFrG5umC1dVWaeYvUnGm62g4XS29fj6p01dhKNNqrsu5KrhnhdnKYVv9VdmbmqDfWR8wDgglk5cJFqalzq6dJWJInFQEPmUs9BW_Zs8tQDn-i5r4tYq2U8vCdqptXoM7YgPllXaPVDeccC9QNu2Xlp9WUvoROzoQXg25lFub1IYkTrM66gJ6t9fJRZToewCt495WNEOQFa_rwLCZ1QwzvL0iYkONHS_jZ0BOhBCdW9dWSawD6iF1SIQaFROvMDH1rg";
+
+    const cstcDataResponse = await fetch(
+      "https://e.cafef.vn/fi.ashx?symbol=" + macongty
+    );
+
+    let data = {};
+
+    data.cstc = await cstcDataResponse.json();
+
+    let result = [];
+
+    let count = 0;
+
+    for (let v of data.cstc) {
+      count++;
+      result.push({
+        year: v.Year,
+        EPS: v.EPS,
+        ROA: v.ROA,
+        ROE: v.ROE,
+        BV: v.BV,
+      });
+      if (count === 6) break;
+    }
+
+    let lastYear = result[0].year;
+
+    console.log(lastYear);
+
+    const cdktDataResponse = await fetch(
+      `https://restv2.fireant.vn/symbols/${macongty}/full-financial-reports?type=1&year=${lastYear}&quarter=0&limit=9`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: token,
+        },
+      }
+    );
+
+    const kqkdDataResponse = await fetch(
+      `https://restv2.fireant.vn/symbols/${macongty}/full-financial-reports?type=2&year=${lastYear}&quarter=0&limit=9`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: token,
+        },
+      }
+    );
+
+    const lcttDataResponse = await fetch(
+      `https://restv2.fireant.vn/symbols/${macongty}/full-financial-reports?type=3&year=${lastYear}&quarter=0&limit=9`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: token,
+        },
+      }
+    );
+
+    data.cdkt = await cdktDataResponse.json();
+    data.kqkd = await kqkdDataResponse.json();
+    data.lctt = await lcttDataResponse.json();
+
+    if (!data.lctt) {
+      let retryResponse = await fetch(
+        `https://restv2.fireant.vn/symbols/${macongty}/full-financial-reports?type=4&year=${lastYear}&quarter=0&limit=9`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: token,
+          },
+        }
+      );
+
+      data.lctt = await retryResponse.json();
+      if (!data.lctt) data.lctt = [];
+    }
+
+    let dataNeeded = [
+      {
+        title: "Vốn chủ sở hữu",
+        name: "I. Vốn chủ sở hữu",
+        source: "cdkt",
+      },
+      {
+        title: "Nợ dài hạn",
+        name: "II. Nợ dài hạn",
+        source: "cdkt",
+      },
+      {
+        title: "Tổng cộng tài sản",
+        name: "TỔNG CỘNG TÀI SẢN",
+        source: "cdkt",
+      },
+      {
+        title: "Doanh thu thuần",
+        name: "Doanh thu thuần",
+        source: "kqkd",
+      },
+      {
+        title: "Lợi nhuận sau thuế thu nhập doanh nghiệp",
+        name: "Lợi nhuận sau thuế thu nhập doanh nghiệp",
+        source: "kqkd",
+      },
+      {
+        title: "Lợi nhuận thuần từ hoạt động kinh doanh",
+        name: "Lợi nhuận thuần từ hoạt động kinh doanh",
+        otherSiteName: "lợi nhuận thuần hoạt động kinh doanh bảo hiểm",
+        otherName: "Lợi nhuận thuần hoạt động kinh doanh bảo hiểm",
+        source: "kqkd",
+      },
+      {
+        title: "Lưu chuyển tiền thuần từ hoạt động kinh doanh",
+        name: "Lưu chuyển tiền thuần từ hoạt động kinh doanh",
+        otherSiteName: "lưu chuyển tiền thuần từ hoạt động kinh doanh",
+        source: "lctt",
+      },
+    ];
+
+    let result2 = [];
+    for (let r of result) {
+      let rs = { ...r };
+
+      for (let v of dataNeeded) {
+        let selectedData = data[v.source].filter(
+          (d) =>
+            d.name.includes(v.name) ||
+            (v.otherName && d.name.includes(v.otherName))
+        )[0];
+        if (!selectedData) {
+          rs[v.title] = null;
+          return;
+        }
+
+        let selectedValue = selectedData.values.filter((d) => {
+          return d.year === rs.year;
+        })[0];
+
+        rs[v.title] = selectedValue ? selectedValue.value : null;
+
+        if (!rs[v.title])
+          rs[v.title] = await findDataFromOtherSite(
+            macongty,
+            v.otherSiteName,
+            v.source,
+            rs.year
+          );
+      }
+
+      result2.push(rs);
+    }
+
+    return result2;
+  } catch (err) {
+    console.log(err);
+    return [];
+  }
+}
+
 async function getDataQuarter(macongty) {
   const response = await fetch(
     `https://api5.fialda.com/api/services/app/TechnicalAnalysis/GetFinancialHighlights?symbol=${macongty}`
@@ -212,6 +397,7 @@ async function getDataQuarter(macongty) {
         year: report.year,
         quarter: report.quarter,
         sale: report.netSale,
+        eps: report.eps,
       });
       count++;
     }
@@ -221,4 +407,4 @@ async function getDataQuarter(macongty) {
   return result;
 }
 
-export { getData4M, getDataQuarter };
+export { getData4M, getDataQuarter, getData4Mv2 };
