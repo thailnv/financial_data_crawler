@@ -15,6 +15,7 @@ function mapping(template, data, year, name, mArr) {
 }
 
 async function findDataFromOtherSite(code, name, from, year) {
+  console.log(year);
   let source = {
     kqkd: "IncSta",
     lctt: "CashFlow",
@@ -270,8 +271,18 @@ async function getData4Mv2(macongty) {
       }
     );
 
-    const lcttDataResponse = await fetch(
+    const lctt1DataResponse = await fetch(
       `https://restv2.fireant.vn/symbols/${macongty}/full-financial-reports?type=3&year=${lastYear}&quarter=0&limit=9`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: token,
+        },
+      }
+    );
+
+    const lctt2DataResponse = await fetch(
+      `https://restv2.fireant.vn/symbols/${macongty}/full-financial-reports?type=4&year=${lastYear}&quarter=0&limit=9`,
       {
         method: "GET",
         headers: {
@@ -282,21 +293,35 @@ async function getData4Mv2(macongty) {
 
     data.cdkt = await cdktDataResponse.json();
     data.kqkd = await kqkdDataResponse.json();
-    data.lctt = await lcttDataResponse.json();
 
-    if (!data.lctt) {
-      let retryResponse = await fetch(
-        `https://restv2.fireant.vn/symbols/${macongty}/full-financial-reports?type=4&year=${lastYear}&quarter=0&limit=9`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: token,
-          },
-        }
-      );
+    let lctt1 = await lctt1DataResponse.json();
+    let lctt2 = await lctt2DataResponse.json();
 
-      data.lctt = await retryResponse.json();
-      if (!data.lctt) data.lctt = [];
+    if (!lctt1 && lctt2) data.lctt = lctt2;
+    if (lctt1 && !lctt2) data.lctt = lctt1;
+    if (lctt1 && lctt2) {
+      data.lctt = [];
+
+      let lctt1Length = lctt1.length;
+      let lctt2Length = lctt2.length;
+
+      if (lctt1Length > lctt2Length)
+        lctt1.forEach((v) => {
+          let rs = { ...v };
+          console.log(rs);
+          let addData = lctt2.filter((l2) => l2.name === v.name)[0];
+          if (addData) rs.values = rs.values.concat(addData.values);
+          data.lctt.push(rs);
+        });
+
+      if (lctt2Length >= lctt1Length)
+        lctt2.forEach((v) => {
+          let rs = { ...v };
+          let addData = lctt1.filter((l1) => l1.name === v.name)[0];
+          console.log(rs, addData);
+          if (addData) rs.values = rs.values.concat(addData.values);
+          data.lctt.push(rs);
+        });
     }
 
     let dataNeeded = [
@@ -308,6 +333,7 @@ async function getData4Mv2(macongty) {
       {
         title: "Nợ dài hạn",
         name: "II. Nợ dài hạn",
+        otherName: "Nợ phải trả ngắn hạn",
         source: "cdkt",
       },
       {
@@ -350,9 +376,11 @@ async function getData4Mv2(macongty) {
             d.name.includes(v.name) ||
             (v.otherName && d.name.includes(v.otherName))
         )[0];
+
         if (!selectedData) {
+          console.log(v.title);
           rs[v.title] = null;
-          return;
+          continue;
         }
 
         let selectedValue = selectedData.values.filter((d) => {
