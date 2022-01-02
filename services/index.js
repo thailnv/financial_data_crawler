@@ -15,7 +15,7 @@ function mapping(template, data, year, name, mArr) {
 }
 
 async function findDataFromOtherSite(code, name, from, year) {
-  console.log(year);
+  console.log(`Find ${name} from cafef year: ${year}`);
   let source = {
     kqkd: "IncSta",
     lctt: "CashFlow",
@@ -308,7 +308,7 @@ async function getData4Mv2(macongty) {
       if (lctt1Length > lctt2Length)
         lctt1.forEach((v) => {
           let rs = { ...v };
-          console.log(rs);
+          // console.log(rs);
           let addData = lctt2.filter((l2) => l2.name === v.name)[0];
           if (addData) rs.values = rs.values.concat(addData.values);
           data.lctt.push(rs);
@@ -318,7 +318,7 @@ async function getData4Mv2(macongty) {
         lctt2.forEach((v) => {
           let rs = { ...v };
           let addData = lctt1.filter((l1) => l1.name === v.name)[0];
-          console.log(rs, addData);
+          // console.log(rs, addData);
           if (addData) rs.values = rs.values.concat(addData.values);
           data.lctt.push(rs);
         });
@@ -327,40 +327,48 @@ async function getData4Mv2(macongty) {
     let dataNeeded = [
       {
         title: "Vốn chủ sở hữu",
-        name: "I. Vốn chủ sở hữu",
+        name: ["I. Vốn chủ sở hữu"],
         source: "cdkt",
       },
       {
         title: "Nợ dài hạn",
-        name: "II. Nợ dài hạn",
-        otherName: "Nợ phải trả ngắn hạn",
+        name: ["Nợ dài hạn", "Nợ phải trả dài hạn"],
         source: "cdkt",
       },
       {
         title: "Tổng cộng tài sản",
-        name: "TỔNG CỘNG TÀI SẢN",
+        name: ["TỔNG CỘNG TÀI SẢN"],
         source: "cdkt",
       },
       {
         title: "Doanh thu thuần",
-        name: "Doanh thu thuần",
+        name: [
+          "Doanh thu thuần",
+          "Cộng doanh thu hoạt động",
+          "Doanh thu thuần hoạt động kinh doanh bảo hiểm",
+        ],
         source: "kqkd",
       },
       {
         title: "Lợi nhuận sau thuế thu nhập doanh nghiệp",
-        name: "Lợi nhuận sau thuế thu nhập doanh nghiệp",
+        name: [
+          "Lợi nhuận sau thuế thu nhập doanh nghiệp",
+          "LỢI NHUẬN KẾ TOÁN SAU THUẾ TNDN",
+        ],
         source: "kqkd",
       },
       {
         title: "Lợi nhuận thuần từ hoạt động kinh doanh",
-        name: "Lợi nhuận thuần từ hoạt động kinh doanh",
+        name: [
+          "Lợi nhuận thuần từ hoạt động kinh doanh",
+          "Lợi nhuận thuần hoạt động kinh doanh bảo hiểm",
+        ],
         otherSiteName: "lợi nhuận thuần hoạt động kinh doanh bảo hiểm",
-        otherName: "Lợi nhuận thuần hoạt động kinh doanh bảo hiểm",
         source: "kqkd",
       },
       {
         title: "Lưu chuyển tiền thuần từ hoạt động kinh doanh",
-        name: "Lưu chuyển tiền thuần từ hoạt động kinh doanh",
+        name: ["Lưu chuyển tiền thuần từ hoạt động kinh doanh"],
         otherSiteName: "lưu chuyển tiền thuần từ hoạt động kinh doanh",
         source: "lctt",
       },
@@ -371,14 +379,14 @@ async function getData4Mv2(macongty) {
       let rs = { ...r };
 
       for (let v of dataNeeded) {
-        let selectedData = data[v.source].filter(
-          (d) =>
-            d.name.includes(v.name) ||
-            (v.otherName && d.name.includes(v.otherName))
-        )[0];
+        let selectedData = data[v.source].filter((d) => {
+          return v.name.filter((n) => {
+            let rs = d.name.includes(n);
+            return rs;
+          })[0];
+        })[0];
 
         if (!selectedData) {
-          console.log(v.title);
           rs[v.title] = null;
           continue;
         }
@@ -389,7 +397,7 @@ async function getData4Mv2(macongty) {
 
         rs[v.title] = selectedValue ? selectedValue.value : null;
 
-        if (!rs[v.title])
+        if (!rs[v.title] && v.otherSiteName)
           rs[v.title] = await findDataFromOtherSite(
             macongty,
             v.otherSiteName,
