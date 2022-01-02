@@ -362,6 +362,7 @@ async function getData4Mv2(macongty) {
         name: [
           "Lợi nhuận thuần từ hoạt động kinh doanh",
           "Lợi nhuận thuần hoạt động kinh doanh bảo hiểm",
+          "KẾT QUẢ HOẠT ĐỘNG",
         ],
         otherSiteName: "lợi nhuận thuần hoạt động kinh doanh bảo hiểm",
         source: "kqkd",
