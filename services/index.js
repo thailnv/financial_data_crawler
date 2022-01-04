@@ -49,175 +49,6 @@ function findDataFromHtml(arr, name) {
   return value;
 }
 
-async function getData4M(macongty) {
-  try {
-    console.log(macongty);
-    const cstcDataResponse = await fetch(
-      "https://e.cafef.vn/fi.ashx?symbol=" + macongty
-    );
-
-    const kqhdkdTemplateResponse = await fetch(
-      `https://cdn.fialda.com//FinancialStatementTemplates/IncomeStatement_General_MappingTemplate.json?version=1.0.7.0`
-    );
-
-    const kqhdkdDataResponse = await fetch(
-      `https://fwtapi2.fialda.com/api/services/app/StockInfo/GetFS_IncomeStatement_General?symbol=${macongty}&isQuarterReport=false`
-    );
-
-    const cdktTemplateResponse = await fetch(
-      "https://cdn.fialda.com//FinancialStatementTemplates/BalanceSheet_General_MappingTemplate.json?version=1.0.7.0"
-    );
-    const cdktDataResponse = await fetch(
-      `https://fwtapi2.fialda.com/api/services/app/StockInfo/GetFS_BalanceSheet_General?symbol=${macongty}&isQuarterReport=false`
-    );
-
-    const lcttTemplateResponse = await fetch(
-      "https://cdn.fialda.com//FinancialStatementTemplates/Cashflow_General_MappingTemplate.json?version=1.0.7.0"
-    );
-
-    const lcttDataResponse = await fetch(
-      `https://fwtapi1.fialda.com/api/services/app/StockInfo/GetFS_Cashflow_General?symbol=${macongty}&isQuarterReport=false`
-    );
-
-    let data = {};
-    let template = {};
-
-    data.cstc = await cstcDataResponse.json();
-
-    data.kqhdkd = await kqhdkdDataResponse.json();
-    template.kqhdkd = await kqhdkdTemplateResponse.json();
-
-    data.cdkt = await cdktDataResponse.json();
-    template.cdkt = await cdktTemplateResponse.json();
-
-    data.lctt = await lcttDataResponse.json();
-    template.lctt = await lcttTemplateResponse.json();
-
-    //const result = data.result.map((v) => { return { year: v.year, quarter: v.quarter, eps: v.eps } });
-    // if (result[0].eps === null) {
-    //   return [];
-    // }
-
-    let dataNeeded = [
-      {
-        name: "Doanh thu thuần",
-        otherName: "doanh thu thuần về bán hàng và cung cấp dịch vụ",
-        source: "kqhdkd",
-        otherSource: "kqhdkdHtml",
-      },
-      {
-        name: "Lợi nhuận sau thuế thu nhập doanh nghiệp",
-        otherName: "lợi nhuận sau thuế thu nhập doanh nghiệp",
-        source: "kqhdkd",
-        otherSource: "kqhdkdHtml",
-      },
-      {
-        name: "Vốn chủ sở hữu",
-        otherName: "vốn chủ sở hữu",
-        source: "cdkt",
-        otherSource: "cdktHtml",
-      },
-      {
-        name: "Nợ dài hạn",
-        otherName: "nợ dài hạn",
-        source: "cdkt",
-        otherSource: "cdktHtml",
-      },
-      {
-        name: "TỔNG CỘNG TÀI SẢN",
-        otherName: "tổng cộng tài sản",
-        source: "cdkt",
-        otherSource: "cdktHtml",
-      },
-      {
-        name: "Lợi nhuận thuần từ hoạt động kinh doanh",
-        otherName: "lợi nhuận thuần từ hoạt động kinh doanh",
-        source: "kqhdkd",
-        otherSource: "kqhdkdHtml",
-      },
-      {
-        name: "Lưu chuyển tiền thuần từ hoạt động kinh doanh",
-        otherName: "lưu chuyển tiền thuần từ hoạt động kinh doanh",
-        source: "lctt",
-        otherSource: "lcttHtml",
-      },
-    ];
-
-    let missingYearList = [];
-
-    let result = data.cstc.filter((v) => v.Year >= 2015);
-    result = result.map((v) => {
-      let rs = {
-        year: v.Year,
-        EPS: v.EPS,
-        ROA: v.ROA,
-        ROE: v.ROE,
-        BV: v.BV,
-      };
-      rs = dataNeeded.reduce((r, d) => {
-        let tmp = {
-          ...r,
-          [d.name.toLowerCase()]: mapping(
-            template[d.source],
-            data[d.source].result,
-            r.year,
-            d.name,
-            missingYearList
-          ),
-        };
-        return tmp;
-      }, rs);
-      return rs;
-    });
-
-    if (!missingYearList.length) return result;
-
-    console.log(missingYearList);
-
-    const cdktHtmlResponse = await fetch(
-      `https://s.cafef.vn/bao-cao-tai-chinh/${macongty}/BSheet/2018/0/0/0/bao-cao-tai-chinh-cong-ty-co-phan-tap-doan-hoa-phat.chn`
-    );
-
-    const kqhdkdHtmlResponse = await fetch(
-      `https://s.cafef.vn/bao-cao-tai-chinh/${macongty}/IncSta/2018/0/0/0/bao-cao-tai-chinh-cong-ty-co-phan-tap-doan-hoa-phat.chn`
-    );
-
-    const lcttHtmlResponse = await fetch(
-      `https://s.cafef.vn/bao-cao-tai-chinh/${macongty}/CashFlow/2018/0/0/0/luu-chuyen-tien-te-truc-tiep-cong-ty-co-phan-tap-doan-hoa-phat.chn`
-    );
-
-    let cdktHtmlString = await cdktHtmlResponse.text();
-    data.cdktHtml = htmlToArray(cdktHtmlString);
-
-    let kqhdkdHtmlString = await kqhdkdHtmlResponse.text();
-    data.kqhdkdHtml = htmlToArray(kqhdkdHtmlString);
-
-    let lcttHtmlString = await lcttHtmlResponse.text();
-    data.lcttHtml = htmlToArray(lcttHtmlString);
-
-    result = result.map((v) => {
-      let rs = { ...v };
-      if (missingYearList.indexOf(v.year) !== -1) {
-        rs = dataNeeded.reduce((r, v) => {
-          return {
-            ...r,
-            [v.name.toLowerCase()]: findDataFromHtml(
-              data[v.otherSource],
-              v.otherName
-            ),
-          };
-        }, rs);
-      }
-      return rs;
-    });
-
-    return result;
-  } catch (err) {
-    console.log(err);
-    return [];
-  }
-}
-
 async function getData4Mv2(macongty) {
   try {
     const token =
@@ -444,4 +275,135 @@ async function getDataQuarter(macongty) {
   return result;
 }
 
-export { getData4M, getDataQuarter, getData4Mv2 };
+async function getCDKT(macongty) {
+  try {
+    const token =
+      "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IkdYdExONzViZlZQakdvNERWdjV4QkRITHpnSSIsImtpZCI6IkdYdExONzViZlZQakdvNERWdjV4QkRITHpnSSJ9.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmZpcmVhbnQudm4iLCJhdWQiOiJodHRwczovL2FjY291bnRzLmZpcmVhbnQudm4vcmVzb3VyY2VzIiwiZXhwIjoxODg5NjIyNTMwLCJuYmYiOjE1ODk2MjI1MzAsImNsaWVudF9pZCI6ImZpcmVhbnQudHJhZGVzdGF0aW9uIiwic2NvcGUiOlsiYWNhZGVteS1yZWFkIiwiYWNhZGVteS13cml0ZSIsImFjY291bnRzLXJlYWQiLCJhY2NvdW50cy13cml0ZSIsImJsb2ctcmVhZCIsImNvbXBhbmllcy1yZWFkIiwiZmluYW5jZS1yZWFkIiwiaW5kaXZpZHVhbHMtcmVhZCIsImludmVzdG9wZWRpYS1yZWFkIiwib3JkZXJzLXJlYWQiLCJvcmRlcnMtd3JpdGUiLCJwb3N0cy1yZWFkIiwicG9zdHMtd3JpdGUiLCJzZWFyY2giLCJzeW1ib2xzLXJlYWQiLCJ1c2VyLWRhdGEtcmVhZCIsInVzZXItZGF0YS13cml0ZSIsInVzZXJzLXJlYWQiXSwianRpIjoiMjYxYTZhYWQ2MTQ5Njk1ZmJiYzcwODM5MjM0Njc1NWQifQ.dA5-HVzWv-BRfEiAd24uNBiBxASO-PAyWeWESovZm_hj4aXMAZA1-bWNZeXt88dqogo18AwpDQ-h6gefLPdZSFrG5umC1dVWaeYvUnGm62g4XS29fj6p01dhKNNqrsu5KrhnhdnKYVv9VdmbmqDfWR8wDgglk5cJFqalzq6dJWJInFQEPmUs9BW_Zs8tQDn-i5r4tYq2U8vCdqptXoM7YgPllXaPVDeccC9QNu2Xlp9WUvoROzoQXg25lFub1IYkTrM66gJ6t9fJRZToewCt495WNEOQFa_rwLCZ1QwzvL0iYkONHS_jZ0BOhBCdW9dWSawD6iF1SIQaFROvMDH1rg";
+
+    const cdktDataResponse = await fetch(
+      `https://restv2.fireant.vn/symbols/${macongty}/full-financial-reports?type=1&year=2020&quarter=0&limit=9`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: token,
+        },
+      }
+    );
+
+    let data = {};
+
+    let result = [];
+
+    let dataNeeded = [
+      {
+        title: "Tien va cac khoang tuong duong tien",
+        name: ["Tiền"],
+      },
+      {
+        title: "Cac khoan dau tu tai chinh ngan han",
+        name: ["Các khoản đầu tư tài chính ngắn hạn"],
+      },
+      {
+        title: "Cac khoan phai thu ngan han",
+        name: ["Các khoản phải thu ngắn hạn", "Các khoản phải thu"],
+      },
+      {
+        title: "Hang ton kho",
+        name: ["Hàng tồn kho"],
+      },
+      {
+        title: "Tai san ngan han khac",
+        name: ["Tài sản ngắn hạn khác"],
+      },
+      {
+        title: "Cac khoang phai thu dai han",
+        name: ["Khoảng phải thu dài hạn", "Các khoản phải thu dài hạn"],
+      },
+      {
+        title: "Tai san co dinh",
+        name: ["Tài sản cố định"],
+      },
+      {
+        title: "Bat dong san dau tu",
+        name: ["Bất động sản đầu tư"],
+      },
+      {
+        title: "Dau tu tai chinh dai han",
+        name: [
+          "Đầu tư tài chính dài hạn",
+          "Các khoản đầu tư tài chính dài hạn",
+        ],
+      },
+      {
+        title: "Tai san dai han khac",
+        name: ["Tổng tài sản dài hạn khác"],
+      },
+      {
+        title: "Tai san do dang dai han",
+        name: ["Tài sản dở dang dài hạn"],
+      },
+    ];
+
+    data.cdkt = await cdktDataResponse.json();
+
+    let dataLength = data.cdkt[0].values.length;
+
+    if (dataLength < 6) {
+      console.log(data.cdkt[0][dataLength - 1].year);
+    }
+
+    let count = 0;
+
+    for (let i = dataLength - 1; i >= 0; i--) {
+      result.push({
+        year: data.cdkt[0].values[i].year,
+      });
+      count++;
+      if (count === 6) break;
+    }
+
+    console.log(result);
+
+    let result2 = [];
+    for (let r of result) {
+      let rs = { ...r };
+
+      for (let v of dataNeeded) {
+        let selectedData = data.cdkt.filter((d) => {
+          return v.name.filter((n) => {
+            let rs = d.name.includes(n);
+            return rs;
+          })[0];
+        })[0];
+
+        if (!selectedData) {
+          rs[v.title] = 0;
+          continue;
+        }
+
+        let selectedValue = selectedData.values.filter((d) => {
+          return d.year === rs.year;
+        })[0];
+
+        rs[v.title] = selectedValue ? selectedValue.value : 0;
+
+        if (!rs[v.title] && v.otherSiteName)
+          rs[v.title] = await findDataFromOtherSite(
+            macongty,
+            v.otherSiteName,
+            v.source,
+            rs.year
+          );
+      }
+
+      result2.push(rs);
+    }
+
+    return result2;
+  } catch (err) {
+    console.log(err);
+    return [];
+  }
+}
+
+export { getCDKT, getDataQuarter, getData4Mv2 };

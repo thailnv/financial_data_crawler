@@ -1,5 +1,5 @@
 import express from "express";
-import { getAPI4M, getAPIQuarter } from "./controllers/dataEPS.js";
+import { getAPICDKT, getAPI4M, getAPIQuarter } from "./controllers/dataEPS.js";
 const app = express();
 
 app.listen(5000, function () {
@@ -8,3 +8,4 @@ app.listen(5000, function () {
 
 app.get("/api/4m/:macongty", getAPI4M);
 app.get("/api/quarter/:macongty", getAPIQuarter);
+app.get("/api/cdkt/:macongty", getAPICDKT);
