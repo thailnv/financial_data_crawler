@@ -332,6 +332,7 @@ async function getCDKT(macongty) {
         name: [
           "Đầu tư tài chính dài hạn",
           "Các khoản đầu tư tài chính dài hạn",
+          "Các khoản đầu tư",
         ],
       },
       {
@@ -340,7 +341,7 @@ async function getCDKT(macongty) {
       },
       {
         title: "Tai san do dang dai han",
-        name: ["Tài sản dở dang dài hạn"],
+        name: ["Tài sản dở dang dài hạn", "Chi phí dở dang"],
       },
     ];
 
@@ -369,12 +370,26 @@ async function getCDKT(macongty) {
       let rs = { ...r };
 
       for (let v of dataNeeded) {
-        let selectedData = data.cdkt.filter((d) => {
+        let allSelectedData = data.cdkt.filter((d) => {
           return v.name.filter((n) => {
             let rs = d.name.includes(n);
             return rs;
           })[0];
-        })[0];
+        });
+
+        let selectedDataIndex = 0;
+        let minNameLength = 9999;
+
+        let selectedData = null;
+
+        allSelectedData.forEach((s, i) => {
+          if (s.name.length < minNameLength) {
+            minNameLength = s.name.length;
+            selectedDataIndex = i;
+          }
+        });
+
+        selectedData = allSelectedData[selectedDataIndex];
 
         if (!selectedData) {
           rs[v.title] = 0;
